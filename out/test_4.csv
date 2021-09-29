@@ -1,0 +1,11 @@
+,COLUMN_NAME,DATA_TYPE
+0,llc_id,int
+1,field1,varchar
+2,field2,varchar
+3,field3,varchar
+4,field4,varchar
+5,field5,float
+6,field6,varchar
+7,field7,int
+8,field8,varchar
+9,field9,varchar

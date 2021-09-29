@@ -1,0 +1,6 @@
+,schema_name,table_name,valid_table_name,row_count,field_names,field_values
+0,dbo,test_1,tbc,5.0,"llc_id, field1, field2, field3, field4, field5, field6, field7, field8, field9","int, varchar, varchar, varchar, varchar, float, varchar, int, varchar, varchar"
+1,guest,test_2,tbc,5.0,"llc_id, field1, field2, field3, field4, field5, field6, field7, field8, field9","int, varchar, varchar, varchar, varchar, float, varchar, int, varchar, varchar"
+2,dbo,test_3,tbc,5.0,"llc_id, field1, field2, field3, field4, field5, field6, field7, field8, field9","int, varchar, varchar, varchar, varchar, float, varchar, int, varchar, varchar"
+3,dbo,test_4,tbc,5.0,"llc_id, field1, field2, field3, field4, field5, field6, field7, field8, field9","int, varchar, varchar, varchar, varchar, float, varchar, int, varchar, varchar"
+4,dbo,test_5,tbc,5.0,"llc_id, field1, field2, field3, field4, field5, field6, field7, field8, field9","int, varchar, varchar, varchar, varchar, float, varchar, int, varchar, varchar"
