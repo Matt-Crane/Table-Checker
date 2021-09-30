@@ -2,6 +2,9 @@ import pyodbc
 import getpass
 import pandas as pd
 import os
+import datetime
+import re
+
 
 def connect():
     '''
@@ -31,14 +34,46 @@ def connect():
     cnxn = pyodbc.connect(cnxn_str)
     return cnxn
 
+def verify_date_format(date):
+    '''
+    Non-valid Date formats (must be DD/MM/YYYY)
+    '''
+    date_format = '%d/%m/%Y'
+    try:
+        date_obj = datetime.strptime(date, date_format)
+        return True
+    except ValueError:
+        return False
 
+def verify_version(version):
+    pattern = re.compile("^v[0-9]{4}")
+    if pattern.match(version):
+        return True
+    else:
+        return False
+
+
+def name_validator(df):
+    parts = df["table_name"].split("_")
+    # Contains at least 3 underscore separated sections
+    if len(parts) < 3:
+        return "No"
+    
+    # Final section is YYYYMMDD
+    if verify_date_format(parts[-1]):
+        # Section contains version of form v0001
+        if verify_version(parts[-2]):
+            # section is version, version and -description, or version and -values
+            if len(parts[-2] == 5) or (len(parts[-2]) == 17 and "-description" in parts[-2]) or (len(parts[-2]) == 12 and "-values" in parts[-2]):
+                return True
+    # if any one condition fails
+    return False
 
 def verify_table_name(tables_list):
     '''
     TODO make regex match expected table name
     '''
-    tables_list["valid_table_name"] = tables_list["table_name"].str.match(r'(^w*)')
-    tables_list["valid_table_name"] = "tbc"
+    tables_list["valid_table_name"] = tables_list.apply(name_validator, axis = 1)
     
     
 def type_rules(df):
