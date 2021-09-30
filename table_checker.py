@@ -8,8 +8,8 @@ def connect():
     input server connections and login details
     '''
     #server = input("Input server name: ")
-    server = "1JZRZ93"
-    database = "Test Databases" # temp
+    server = "SERPSQL"
+    database = "UKSERPUKLLC" # temp
     #uid = input("Input user id: ")
     #pwd = getpass.getpass(prompt="Input password: ")
 
@@ -27,6 +27,7 @@ def connect():
         server,
         database
     )
+
     cnxn = pyodbc.connect(cnxn_str)
     return cnxn
 
@@ -38,15 +39,35 @@ def verify_table_name(tables_list):
     '''
     tables_list["valid_table_name"] = tables_list["table_name"].str.match(r'(^w*)')
     tables_list["valid_table_name"] = "tbc"
+    
+    
+def type_rules(df):
+    if "-values" in df["table_name"]: #or ("Vales" in df["table_name"] and df["schema_name"] == "EXCEED"):
+        return "values"
+    elif "-description" in df["table_name"]: #or ("variables" in df["table_name"] and df["schema_name"] == "EXCEED"):
+        return "descriptions"
+    elif len(str(df["field_names"]).split(",")) <= 5:
+        return "unclear"
+    else:
+        return "data"
 
+def get_table_type(df):    
+    df["table_type"] = df.apply(type_rules, axis = 1)
+
+
+    
 def get_table_names(cnxn):
     tables_list = pd.read_sql("select schema_name(t.schema_id) as schema_name, "+
                                 "t.name as table_name "+
-                                "from sys.tables t; ",
+                                "from sys.tables t " +
+                                "order by schema_name, table_name ",
                                  cnxn)
 
     verify_table_name(tables_list)
     return tables_list
+
+
+
 
 def get_row_metadata(cnxn, df):
     '''
@@ -54,8 +75,9 @@ def get_row_metadata(cnxn, df):
         Get number of rows
     '''
     for schema, table in zip(df["schema_name"], df["table_name"]):
-        count = cnxn.cursor().execute("select count(*) from "+schema+"."+table).fetchone()[0]
+        count = cnxn.cursor().execute("select count(*) from ["+schema+"].["+table+"]").fetchone()[0]
         df.loc[df["table_name"] ==table, "row_count"] = count
+        
 
 
 def get_identity(cnx, df):
@@ -63,6 +85,7 @@ def get_identity(cnx, df):
     Find and return identity columns
     '''
     pass
+
     
 def get_column_metadata(cnxn, df):
     '''
@@ -73,31 +96,53 @@ def get_column_metadata(cnxn, df):
         get fields with id in name
     '''
     tablewise_dfs = {}
-    for  table in df["table_name"]:
+    for schema, table in zip(df["schema_name"], df["table_name"]):
         fields = pd.read_sql("SELECT COLUMN_NAME,DATA_TYPE From "+
                             "INFORMATION_SCHEMA.COLUMNS "+
                             "where TABLE_NAME='"+table+"'", cnxn)
         field_names, field_types = ", ".join(fields["COLUMN_NAME"]), ", ".join(fields["DATA_TYPE"])
-        tablewise_dfs[table] = fields
-        df.loc[df["table_name"] == table, "field_names"] = field_names
-        df.loc[df["table_name"] == table, 'field_values'] = field_types
-        
+        tablewise_dfs[schema+"-"+table] = fields
 
-    # get field names
-    # get field types
-    # identify id column
+
+        df.loc[(df["table_name"] == table) & (df["schema_name"] == schema), "field_names"] = field_names
+        df.loc[(df["table_name"] == table) & (df["schema_name"] == schema), 'field_types'] = field_types
+
     return tablewise_dfs
 
+
+def get_variable_descriptions(cnxn, df, tablewise_field_data):
+    '''
+    Assumes done properly (ignore EXCEED which is playing by its own rules)
+    description table includes '-description' in name and has fields, 'field', 'meaning',...
+    Shares same naming format as data and values table.
+    '''
+    desc_tables = df.loc[df["table_type"] == "descriptions"]
+
+    for schema, table in zip(desc_tables["schema_name"], desc_tables["table_name"]):
+        fields = pd.read_sql("SELECT field as COLUMN_NAME,meaning as MEANING From ["+schema+"].["+table+"]", cnxn)
+        tablewise_field_data["DESCRIPTIONS-"+schema+"-"+table] = fields
+        
+    return tablewise_field_data
+            
+        
+
+
 def output(df, tablewise_field_data):
+    if not os.path.exists("out"):
+        os.mkdir("out")
     df.to_csv(os.path.join("out","all_tables.csv"))
     for key, value in tablewise_field_data.items():
-        value.to_csv(os.path.join("out",key+".csv"))
+        value.to_csv(os.path.join("out", key+".csv"))
 
 def main(cnxn):
     df = get_table_names(cnxn)
     get_row_metadata(cnxn, df)
     tablewise_field_data = get_column_metadata(cnxn, df)
+    get_table_type(df)
+    get_variable_descriptions(cnxn, df, tablewise_field_data)
+    
     output(df, tablewise_field_data)
+    
 
 
 if __name__ == "__main__":
