@@ -138,7 +138,7 @@ def get_column_metadata(cnxn, df):
         field_names, field_types = ", ".join(fields["COLUMN_NAME"]), ", ".join(fields["DATA_TYPE"])
         tablewise_dfs[schema+"-"+table] = fields
 
-
+        df.loc[(df["table_name"] == table) & (df["schema_name"] == schema), "field_count"] = len(fields["COLUMN_NAME"])
         df.loc[(df["table_name"] == table) & (df["schema_name"] == schema), "field_names"] = field_names
         df.loc[(df["table_name"] == table) & (df["schema_name"] == schema), 'field_types'] = field_types
 
