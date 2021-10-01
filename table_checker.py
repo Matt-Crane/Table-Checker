@@ -2,7 +2,7 @@ import pyodbc
 import getpass
 import pandas as pd
 import os
-import datetime
+from datetime import datetime
 import re
 
 
@@ -36,9 +36,9 @@ def connect():
 
 def verify_date_format(date):
     '''
-    Non-valid Date formats (must be DD/MM/YYYY)
+    Non-valid Date formats (must be YYYYMMDD)
     '''
-    date_format = '%d/%m/%Y'
+    date_format = '%Y%m%d'
     try:
         date_obj = datetime.strptime(date, date_format)
         return True
@@ -64,7 +64,7 @@ def name_validator(df):
         # Section contains version of form v0001
         if verify_version(parts[-2]):
             # section is version, version and -description, or version and -values
-            if len(parts[-2] == 5) or (len(parts[-2]) == 17 and "-description" in parts[-2]) or (len(parts[-2]) == 12 and "-values" in parts[-2]):
+            if len(parts[-2]) == 5 or (len(parts[-2]) == 17 and "-description" in parts[-2]) or (len(parts[-2]) == 12 and "-values" in parts[-2]):
                 return True
     # if any one condition fails
     return False
