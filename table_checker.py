@@ -10,21 +10,10 @@ def connect():
     '''
     input server connections and login details
     '''
-    #server = input("Input server name: ")
+
     server = "SERPSQL"
     database = "UKSERPUKLLC" # temp
-    #uid = input("Input user id: ")
-    #pwd = getpass.getpass(prompt="Input password: ")
 
-    '''
-    cnxn_str = "DRIVER={}; SERVER={}; DATABASE={}; UID={}; PWD={}".format(
-        "{SQL Server Native Client 11.0}",
-        server,
-        database,
-        uid,
-        pwd
-    )
-    '''
     cnxn_str ="DRIVER={}; SERVER={}; DATABASE={}; Trusted_Connection=yes".format(
         "{SQL Server Native Client 11.0}",
         server,
@@ -34,9 +23,10 @@ def connect():
     cnxn = pyodbc.connect(cnxn_str)
     return cnxn
 
+
 def verify_date_format(date):
     '''
-    Non-valid Date formats (must be YYYYMMDD)
+    Non-valid Date formats (must be YYYY/MM/DD)
     '''
     date_format = '%Y%m%d'
     try:
@@ -44,6 +34,7 @@ def verify_date_format(date):
         return True
     except ValueError:
         return False
+
 
 def verify_version(version):
     pattern = re.compile("^v[0-9]{4}")
@@ -63,11 +54,18 @@ def name_validator(df):
     if verify_date_format(parts[-1]):
         # Section contains version of form v0001
         if verify_version(parts[-2]):
-            # section is version, version and -description, or version and -values
+            # section is version, version and -description, or version and -valuess
             if len(parts[-2]) == 5 or (len(parts[-2]) == 17 and "-description" in parts[-2]) or (len(parts[-2]) == 12 and "-values" in parts[-2]):
-                return True
+                return "Yes"
+        # Also valid if section -2 is subblock number and -3 is version
+        elif all(map(str.isdigit, parts[-2])) and verify_version(parts[-3]):
+            # section is version, version and -description, or version and -valuess
+            if len(parts[-3]) == 5 or (len(parts[-3]) == 17 and "-description" in parts[-3]) or (len(parts[-3]) == 12 and "-values" in parts[-3]):
+                return "Yes"
+        
     # if any one condition fails
-    return False
+    return "No"
+
 
 def verify_table_name(tables_list):
     '''
@@ -86,11 +84,11 @@ def type_rules(df):
     else:
         return "data"
 
+
 def get_table_type(df):    
     df["table_type"] = df.apply(type_rules, axis = 1)
 
 
-    
 def get_table_names(cnxn):
     tables_list = pd.read_sql("select schema_name(t.schema_id) as schema_name, "+
                                 "t.name as table_name "+
@@ -102,8 +100,6 @@ def get_table_names(cnxn):
     return tables_list
 
 
-
-
 def get_row_metadata(cnxn, df):
     '''
     For every table:
@@ -112,14 +108,6 @@ def get_row_metadata(cnxn, df):
     for schema, table in zip(df["schema_name"], df["table_name"]):
         count = cnxn.cursor().execute("select count(*) from ["+schema+"].["+table+"]").fetchone()[0]
         df.loc[df["table_name"] ==table, "row_count"] = count
-        
-
-
-def get_identity(cnx, df):
-    '''
-    Find and return identity columns
-    '''
-    pass
 
     
 def get_column_metadata(cnxn, df):
@@ -160,14 +148,13 @@ def get_variable_descriptions(cnxn, df, tablewise_field_data):
     return tablewise_field_data
             
         
-
-
 def output(df, tablewise_field_data):
     if not os.path.exists("out"):
         os.mkdir("out")
-    df.to_csv(os.path.join("out","all_tables.csv"))
+    df.to_csv(os.path.join("out","all_tables_temp.csv"))
     for key, value in tablewise_field_data.items():
         value.to_csv(os.path.join("out", key+".csv"))
+
 
 def main(cnxn):
     df = get_table_names(cnxn)
@@ -178,7 +165,6 @@ def main(cnxn):
     
     output(df, tablewise_field_data)
     
-
 
 if __name__ == "__main__":
     cnxn = connect()
